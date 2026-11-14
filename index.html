@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plant Keeper</title>
+<meta name="theme-color" content="#1e6a44">
+<meta name="description" content="Care reminders, journal and health history for your plants.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  /* layout: one-column phone app; sticky header, fixed bottom tab bar, plant detail opens as a bottom sheet */
+  --bg:#edf1ec;
+  --surface:#ffffff;
+  --ink:#17231b;
+  --muted:#5a6a60;
+  --line:#d6dfd8;
+  --accent:#1e6a44;
+  --accent-ink:#ffffff;
+  --accent-soft:#dcefe2;
+  --water:#1d5c94; --water-soft:#dce9f5;
+  --feed:#985200; --feed-soft:#f8ead5;
+  --bad:#b0281f; --bad-soft:#f8dfdc;
+  --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --body:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101612; --surface:#18211b; --ink:#e6eee8; --muted:#9aaba0; --line:#2b3a30;
+    --accent:#5cc28b; --accent-ink:#08170e; --accent-soft:#1d3527;
+    --water:#7db6ea; --water-soft:#18293a; --feed:#e9a54f; --feed-soft:#33260f;
+    --bad:#f08a80; --bad-soft:#3a1d1a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18211b; --ink:#e6eee8; --muted:#9aaba0; --line:#2b3a30;
+  --accent:#5cc28b; --accent-ink:#08170e; --accent-soft:#1d3527;
+  --water:#7db6ea; --water-soft:#18293a; --feed:#e9a54f; --feed-soft:#33260f;
+  --bad:#f08a80; --bad-soft:#3a1d1a; color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.5rem}
+h2{font-size:1.2rem}
+h3{font-size:1rem}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-top:14px;padding-bottom:12px}
+header.top .season{font-size:.8rem;color:var(--muted);text-align:right}
+
+main{padding:16px 0 104px}
+main .wrap{display:flex;flex-direction:column;gap:16px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:.875rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.875rem;font-weight:600;color:var(--muted)}
+input[type=text],input[type=number],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-weight:400;color:var(--ink);width:100%}
+textarea{min-height:72px;resize:vertical}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.water{background:var(--water-soft);color:var(--water)}
+.pill.feed{background:var(--feed-soft);color:var(--feed)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-family:var(--display);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.stat.alert b{color:var(--bad)}
+
+.task{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0;padding-top:0}
+.task .what{font-weight:600}
+.task .acts{display:flex;gap:6px}
+.thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--accent-soft);display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--accent);font-size:1.1rem;overflow:hidden;border:0;padding:0;cursor:pointer}
+.stripe{border-left:4px solid var(--accent);padding-left:8px}
+.stripe.water{border-color:var(--water)}
+.stripe.feed{border-color:var(--feed)}
+.late{color:var(--bad);font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column}
+.pcard .ph{aspect-ratio:4/3;background:var(--accent-soft);display:grid;place-items:center;font-family:var(--display);font-size:2.4rem;color:var(--accent);font-weight:700}
+.pcard .ph img{width:100%;height:100%;object-fit:cover}
+.pcard .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.pcard .nm{font-weight:700}
+.pcard .loc{font-size:.8rem;color:var(--muted)}
+
+.drop{border:2px dashed var(--line);border-radius:14px;padding:20px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop img{max-height:280px;border-radius:10px}
+.filebtn{position:relative;overflow:hidden;flex-shrink:0}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+.match{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:transparent;text-align:left;width:100%}
+.match.on{border-color:var(--accent);background:var(--accent-soft)}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.sci{font-style:italic;color:var(--muted);font-size:.875rem}
+
+dl.care{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:.925rem}
+dl.care dt{color:var(--muted);font-weight:600}
+dl.care dd{margin:0}
+ul.tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+
+.issue{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+
+.log{display:flex;flex-direction:column;gap:10px}
+.log .ent{display:grid;grid-template-columns:76px 1fr;gap:10px;font-size:.925rem}
+.log .ent .d{color:var(--muted);font-variant-numeric:tabular-nums;font-size:.8rem;padding-top:2px}
+.log .ent img{border-radius:10px;margin-top:6px;max-height:220px}
+
+.answer{white-space:pre-wrap;background:var(--bg);border-radius:10px;padding:12px;font-size:.95rem}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{background:none;border:0;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.75rem;font-weight:600;color:var(--muted);cursor:pointer}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--accent)}
+
+.scrim{position:fixed;inset:0;background:rgba(10,20,14,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:0 0 32px}
+.sheet .sh-head{position:sticky;top:0;background:var(--bg);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);z-index:2}
+.sheet .sh-body{padding:16px;display:flex;flex-direction:column;gap:14px}
+.cover{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;background:var(--accent-soft)}
+.cover.empty{display:grid;place-items:center;font-family:var(--display);font-size:3rem;color:var(--accent)}
+
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:20;max-width:90%}
+.notice{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--water);border-radius:12px;padding:12px 14px;font-size:.9rem}
+.empty{color:var(--muted);text-align:center;padding:20px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+header.top{padding-top:env(safe-area-inset-top)}
+header.top .wrap{align-items:center}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.iconbtn{background:none;border:1px solid var(--line);border-radius:10px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.iconbtn svg{width:22px;height:22px}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+ol.howto{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.paste{display:flex;flex-direction:column;gap:8px}
+.ok{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="logic.js"></script>
+<script>
+(function(){
+"use strict";
+const {today, parse, addDays, dayDiff, season, TASK, tLabel, waterEvery, every, dueOf, store} = PK;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmt = s => { const d = parse(s); return d.getDate()+" "+MONTHS[d.getMonth()]; };
+const fmtY = s => { const d = parse(s); return d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); };
+const days = n => n+(n===1?" day":" days");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const clone = o => JSON.parse(JSON.stringify(o));
+const SETTINGS = {"outdoor-pot":"Outdoor pot","ground":"In the garden","indoor":"Indoors"};
+const tCls = t => (TASK[t.type]||TASK.custom).cls;
+const CLAUDE_VERSION = "https://claude.ai/artifact/Xtnnm6saG3i6Zo1VURKE3z";
+const claudeLink = q => "https://claude.ai/new?q=" + encodeURIComponent(q);
+
+/* ---------- built-in care library (used when adding by name) ---------- */
+/* [names, species, waterSummerDays, waterWinterDays, light, feedEveryDays, mistEveryDays, toxicity, difficulty] */
+const LIB = [
+ [["rose"],"Rosa hybrid",2,7,"Full sun, 6+ hours",90,0,"Not toxic; thorns","moderate"],
+ [["tulasi","tulsi","holy basil"],"Ocimum tenuiflorum",2,5,"Full sun to bright light",21,0,"Safe for pets and children","easy"],
+ [["basil","sweet basil"],"Ocimum basilicum",2,4,"Full sun",21,0,"Safe for pets and children","easy"],
+ [["curry leaf","curry tree","kadi patta","karuveppilai"],"Murraya koenigii",3,10,"Full sun, sheltered from cold wind",30,0,"Safe for people; keep pets from chewing","moderate"],
+ [["mint"],"Mentha",2,5,"Part shade to sun",30,0,"Mildly toxic to cats and dogs","easy"],
+ [["coriander","cilantro"],"Coriandrum sativum",2,4,"Sun, afternoon shade in summer",21,0,"Safe","easy"],
+ [["chilli","chili","capsicum","pepper"],"Capsicum annuum",2,6,"Full sun, warm spot",14,0,"Leaves mildly toxic to pets","easy"],
+ [["tomato"],"Solanum lycopersicum",1,5,"Full sun",14,0,"Leaves toxic to pets","moderate"],
+ [["curry","drumstick","moringa"],"Moringa oleifera",3,14,"Full sun, warm",30,0,"Safe","moderate"],
+ [["lemon","lime","citrus","mandarin","orange"],"Citrus",3,10,"Full sun, sheltered",42,0,"Mildly toxic to pets","moderate"],
+ [["jasmine","malli","mogra"],"Jasminum sambac",3,10,"Full sun",30,0,"Not toxic","moderate"],
+ [["hibiscus"],"Hibiscus rosa-sinensis",2,8,"Full sun",21,0,"Not toxic","moderate"],
+ [["bougainvillea"],"Bougainvillea",4,14,"Full sun",30,0,"Mildly toxic; thorns","easy"],
+ [["aloe","aloe vera"],"Aloe vera",10,21,"Bright light to sun",0,0,"Toxic to cats and dogs","easy"],
+ [["succulent","echeveria","jade"],"Succulent",10,21,"Bright light to sun",60,0,"Jade is toxic to pets","easy"],
+ [["lavender"],"Lavandula",5,14,"Full sun",0,0,"Mildly toxic to pets","easy"],
+ [["rosemary"],"Salvia rosmarinus",5,14,"Full sun",60,0,"Safe","easy"],
+ [["strawberry"],"Fragaria",2,7,"Full sun",21,0,"Safe","easy"],
+ [["hydrangea"],"Hydrangea macrophylla",2,7,"Morning sun, afternoon shade",42,0,"Toxic to pets","moderate"],
+ [["gardenia"],"Gardenia jasminoides",3,8,"Bright, morning sun",30,0,"Mildly toxic to pets","hard"],
+ [["monstera","swiss cheese"],"Monstera deliciosa",7,14,"Bright indirect light",30,7,"Toxic to pets","easy"],
+ [["peace lily","spathiphyllum"],"Spathiphyllum",5,10,"Medium to bright indirect light",30,7,"Toxic to pets","easy"],
+ [["snake plant","sansevieria","mother in law"],"Dracaena trifasciata",14,28,"Low to bright indirect light",60,0,"Toxic to pets","easy"],
+ [["pothos","money plant","devil's ivy"],"Epipremnum aureum",7,14,"Low to bright indirect light",30,0,"Toxic to pets","easy"],
+ [["orchid","phalaenopsis"],"Phalaenopsis",7,12,"Bright indirect light",14,7,"Not toxic","moderate"],
+ [["fiddle leaf","fiddle leaf fig"],"Ficus lyrata",7,14,"Bright indirect light",30,0,"Toxic to pets","hard"],
+ [["zz plant","zamioculcas"],"Zamioculcas zamiifolia",14,28,"Low to bright indirect light",60,0,"Toxic to pets","easy"],
+ [["spider plant"],"Chlorophytum comosum",5,12,"Bright indirect light",30,0,"Safe for pets","easy"],
+ [["fern","boston fern"],"Nephrolepis exaltata",3,7,"Indirect light",30,3,"Safe for pets","moderate"],
+ [["marigold"],"Tagetes",2,5,"Full sun",21,0,"Mildly toxic to pets","easy"],
+ [["lily","peace"],"Lilium",3,10,"Sun to part shade",30,0,"Highly toxic to cats","moderate"]
+];
+function libFind(name){
+  const n = name.toLowerCase().trim();
+  let best = null;
+  for (const e of LIB) for (const a of e[0]) { if (n === a) return e; if (!best && (n.includes(a) || a.includes(n))) best = e; }
+  return best;
+}
+function libCare(e){
+  return {waterSummerDays:e[2], waterWinterDays:e[3], light:e[4], feedEveryDays:e[5], mistEveryDays:e[6], toxicity:e[7], difficulty:e[8]};
+}
+
+/* ---------- state ---------- */
+let plants = [], meta = {}, ready = false, loadErr = "";
+const TABS = ["today","plants","identify","health"];
+let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "today";
+let sheet = null;          // {kind:"plant"|"add"|"confirm"|"settings", id}
+let toastMsg = "", toastTimer = null;
+const idS = {hint:"", setting:"outdoor-pot", paste:"", parsed:null, err:"", loc:"", photo:null};
+const hcS = {plantId:"", symptoms:"", paste:"", res:null, err:"", savedFor:"", photo:null};
+const addS = {photo:null, journal:null};
+const careS = {};           // plantId -> {err, open}
+const photoCache = {};
+let installEvt = null;
+
+function toast(m){ toastMsg = m; clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ toastMsg=""; render(); }, 3200); render(); }
+
+/* ---------- storage ---------- */
+let saving = Promise.resolve();
+function persist(){
+  const snap = clone(plants);
+  saving = saving.then(() => store.set("plants", snap)).catch(() => toast("Couldn't save on this phone. Check storage space."));
+  return saving;
+}
+function savePlant(p){
+  if (p.log && p.log.length > 120) p.log = p.log.slice(0,120);
+  const i = plants.findIndex(x => x.id === p.id);
+  if (i >= 0) plants[i] = clone(p); else plants.push(clone(p));
+  render();
+  return persist();
+}
+const getPlant = id => { const p = plants.find(x => x.id === id); return p ? clone(p) : null; };
+function addLog(p, text, extra){ p.log = p.log || []; p.log.unshift(Object.assign({d: today(), t: text}, extra||{})); }
+async function loadPhotos(pid, force){
+  if (photoCache[pid] && !force) return;
+  photoCache[pid] = "loading";
+  try { photoCache[pid] = await store.photosFor(pid); } catch(e){ photoCache[pid] = []; }
+  render();
+}
+
+/* ---------- images ---------- */
+async function readImg(file){
+  const url = URL.createObjectURL(file);
+  const img = new Image(); img.src = url;
+  try { await img.decode(); } catch(e){ throw new Error("That photo couldn't be opened. Try a JPG or PNG."); }
+  return img;
+}
+function scaledURL(img, max, q){
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth*s); c.height = Math.round(img.naturalHeight*s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", q);
+}
+
+/* ---------- Claude prompts and paste-back ---------- */
+const CARE_JSON = '"care":{"waterSummerDays":3,"waterWinterDays":10,"light":"","feedEveryDays":30,"feedTip":"","mistEveryDays":0,"humidity":"","temperature":"","soil":"","toxicity":"","difficulty":"easy|moderate|hard","tips":["","",""]}';
+const CARE_RULE = "Watering days = typical days between waterings in that setting. Use 0 when feeding or misting isn't needed.";
+function where(){ return "I live in Auckland, New Zealand. Today is "+fmtY(today())+" ("+season().toLowerCase()+")."; }
+function plantCtx(p){
+  const recent = (p.log||[]).slice(0,6).map(l => l.d+": "+l.t).join("; ");
+  return "My "+p.name+(p.species?" ("+p.species+")":"")+" is "+(SETTINGS[p.setting]||"in a pot").toLowerCase()+(p.location?", "+p.location:"")+"."+(recent?" Recent notes: "+recent+".":"");
+}
+function identifyPrompt(){
+  return "I'm attaching a photo of a plant. "+where()+" It's going to be "+(SETTINGS[idS.setting]||"in a pot").toLowerCase()+"."+(idS.hint?" What I know: "+idS.hint+".":"")+
+    "\n\nPlease identify it: your top 3 matches and how confident you are, then how to care for it here."+
+    "\n\nAt the very end, add one code block containing only this JSON, filled in for your best match, so I can paste it into my Plant Keeper app:\n"+
+    '{"plantkeeper":"plant","name":"","species":"",'+CARE_JSON+'}\n'+CARE_RULE;
+}
+function healthPrompt(p){
+  return "I'm attaching a photo of "+(p ? "my plant. "+plantCtx(p) : "a plant.")+" "+where()+(hcS.symptoms?" What I've noticed: "+hcS.symptoms+".":"")+
+    "\n\nPlease check its health: what's most likely wrong, how sure you are, and step-by-step treatment with products I can buy in NZ."+
+    "\n\nAt the very end, add one code block containing only this JSON, so I can paste it into my Plant Keeper app:\n"+
+    '{"plantkeeper":"health","overall":"healthy|minor|needs-attention|serious","summary":"one or two sentences","issues":[{"name":"","likelihood":"likely|possible","treatment":["step"]}],"careChanges":[""],"followUpDays":7}';
+}
+function carePrompt(p){
+  return plantCtx(p)+" "+where()+"\n\nPlease give me a care guide for it here."+
+    "\n\nAt the very end, add one code block containing only this JSON, so I can paste it into my Plant Keeper app:\n"+
+    '{"plantkeeper":"care","name":"'+p.name.replace(/"/g,"")+'","species":"",'+CARE_JSON+'}\n'+CARE_RULE;
+}
+function askPrompt(p, q){ return plantCtx(p)+" "+where()+"\n\n"+q; }
+
+function parseClaude(text){
+  const blocks = [];
+  const re = /```[a-zA-Z]*\s*([\s\S]*?)```/g; let m;
+  while ((m = re.exec(text))) blocks.push(m[1]);
+  blocks.push(text);
+  for (const b of blocks){
+    const a = b.indexOf("{"), z = b.lastIndexOf("}");
+    if (a < 0 || z < a) continue;
+    try { const v = JSON.parse(b.slice(a, z+1)); if (v && typeof v === "object") return v; } catch(e){}
+  }
+  throw new Error("No Plant Keeper data found. Copy Claude's whole reply, or just the code block at the end.");
+}
+async function clipboardText(){
+  try { return await navigator.clipboard.readText(); } catch(e){ return null; }
+}
+
+/* ---------- plant building ---------- */
+function makePlant(o){
+  const c = o.care || {};
+  const t = today();
+  const tasks = [{id:uid("t"), type:"water", auto:true, last:null, due:t}];
+  if (+c.feedEveryDays > 0) tasks.push({id:uid("t"), type:"feed", every:+c.feedEveryDays, last:null, due:addDays(t,7)});
+  if (+c.mistEveryDays > 0) tasks.push({id:uid("t"), type:"mist", every:+c.mistEveryDays, last:null, due:t});
+  tasks.push({id:uid("t"), type:"check", every:14, last:null, due:addDays(t,7)});
+  return { id: uid("p"), name: o.name, species: o.species||"", location: o.location||"", setting: o.setting||"outdoor-pot",
+    added: t, notes: o.notes||"", cover: o.cover||"", care: c, tasks, log: [{d:t, t: o.logText || "Added to my plants"}] };
+}
+
+/* ---------- actions ---------- */
+function doneTask(pid, tid){
+  const p = getPlant(pid); if (!p) return;
+  const t = (p.tasks||[]).find(x => x.id === tid); if (!t) return;
+  const verb = t.type === "custom" ? "Done: "+tLabel(t) : (TASK[t.type]||TASK.custom).verb + (t.label ? " ("+t.label+")" : "");
+  if (every(t,p) === 0) p.tasks = p.tasks.filter(x => x.id !== tid);
+  else { t.last = today(); delete t.snooze; }
+  addLog(p, verb); savePlant(p); toast(verb+" · "+p.name);
+}
+function laterTask(pid, tid){
+  const p = getPlant(pid); if (!p) return;
+  const t = p.tasks.find(x => x.id === tid); if (!t) return;
+  t.snooze = addDays(today(),1); savePlant(p); toast("Moved to tomorrow");
+}
+function rained(){
+  let n = 0;
+  for (const src of plants){
+    if (src.setting === "indoor") continue;
+    const p = clone(src);
+    const t = (p.tasks||[]).find(x => x.type === "water");
+    if (!t || dueOf(t,p) > addDays(today(),1)) continue;
+    t.last = today(); delete t.snooze; addLog(p, "Rain counted as watering");
+    const i = plants.findIndex(x => x.id === p.id); plants[i] = p; n++;
+  }
+  persist(); toast(n ? "Watering skipped for "+n+" outdoor plant"+(n>1?"s":"") : "No outdoor plants need water yet");
+}
+
+/* ---------- calendar ---------- */
+const icsDate = s => s.replace(/-/g,"");
+function gcalLink(t, p){
+  const d = dueOf(t,p) < today() ? today() : dueOf(t,p);
+  const n = every(t,p);
+  const u = new URL("https://calendar.google.com/calendar/render");
+  u.searchParams.set("action","TEMPLATE");
+  u.searchParams.set("text", tLabel(t)+" · "+p.name);
+  u.searchParams.set("dates", icsDate(d)+"T080000/"+icsDate(d)+"T081500");
+  u.searchParams.set("ctz","Pacific/Auckland");
+  u.searchParams.set("details","Plant Keeper reminder for "+p.name+(t.type==="water"&&t.auto?". Interval follows the season; re-add it when the season changes.":""));
+  if (n > 0) u.searchParams.set("recur","RRULE:FREQ=DAILY;INTERVAL="+n);
+  return u.toString();
+}
+function buildIcs(){
+  const L = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Plant Keeper//EN","CALSCALE:GREGORIAN","X-WR-CALNAME:Plant Keeper"];
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  for (const p of plants) for (const t of (p.tasks||[])){
+    const d = dueOf(t,p) < today() ? today() : dueOf(t,p);
+    const n = every(t,p);
+    L.push("BEGIN:VEVENT","UID:"+t.id+"-"+p.id+"@plant-keeper","DTSTAMP:"+stamp,
+      "DTSTART;TZID=Pacific/Auckland:"+icsDate(d)+"T080000","DURATION:PT15M",
+      "SUMMARY:"+(tLabel(t)+" · "+p.name).replace(/[,;]/g," "));
+    if (n > 0) L.push("RRULE:FREQ=DAILY;INTERVAL="+n);
+    L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+(tLabel(t)+" "+p.name).replace(/[,;]/g," "),"TRIGGER:PT0M","END:VALARM","END:VEVENT");
+  }
+  L.push("END:VCALENDAR");
+  return L.join("\r\n");
+}
+function download(name, text, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+/* ---------- reminders ---------- */
+async function enableReminders(){
+  if (!("Notification" in window)){ toast("This browser can't show notifications. Use the calendar option."); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted"){ toast("Notifications are blocked. Allow them in your phone's settings for this app."); render(); return; }
+  const reg = await navigator.serviceWorker.ready;
+  let bg = false;
+  try {
+    if ("periodicSync" in reg){
+      const st = await navigator.permissions.query({name:"periodic-background-sync"});
+      if (st.state === "granted"){ await reg.periodicSync.register("plant-check", {minInterval: 12*60*60*1000}); bg = true; }
+    }
+  } catch(e){}
+  meta.remindersOn = true; meta.bgSync = bg; await store.set("meta", Object.assign((await store.get("meta"))||{}, {remindersOn:true, bgSync:bg}));
+  if (reg.active) reg.active.postMessage({type:"remind", force:true});
+  toast(bg ? "Reminders on. You'll get a daily alert when tasks are due." : "Reminders on. You'll get an alert when you open the app on a day with tasks.");
+  render();
+}
+
+/* ---------- render ---------- */
+const ICON = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14.5l2.5 2.5 5-5"/></svg>',
+  plants:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8"/><path d="M12 13c0-4 3-7 8-7 0 4.5-3 7-8 7z"/><path d="M12 15c0-3.3-2.5-6-7-6 0 3.8 2.7 6 7 6z"/></svg>',
+  identify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg>',
+  health:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M8 12h2.5l1-2 2 4 1-2H16"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+};
+const TABNAME = {today:"Today",plants:"My plants",identify:"Identify",health:"Health"};
+function dueText(d){
+  const n = dayDiff(d, today());
+  if (n < 0) return '<span class="late">'+days(-n)+" overdue</span>";
+  if (n === 0) return "Due today";
+  if (n === 1) return "Tomorrow";
+  return "In "+n+" days · "+fmt(d);
+}
+function nextTask(p){
+  let best = null;
+  for (const t of (p.tasks||[])) { const d = dueOf(t,p); if (!best || d < best.d) best = {t, d}; }
+  return best;
+}
+const initial = p => esc((p.name||"?").charAt(0).toUpperCase());
+
+function viewToday(){
+  const tasks = PK.allTasks(plants), t = today();
+  const now = tasks.filter(x => x.due <= t);
+  const soon = tasks.filter(x => x.due > t && x.due <= addDays(t,7));
+  const late = now.filter(x => x.due < t).length;
+  const outdoorDue = now.some(x => x.t.type === "water" && x.p.setting !== "indoor");
+  let h = '<div class="summary">'+
+    '<div class="stat'+(late?" alert":"")+'"><b>'+now.length+'</b><span>to do today'+(late?" · "+late+" late":"")+'</span></div>'+
+    '<div class="stat"><b>'+soon.length+'</b><span>this week</span></div>'+
+    '<div class="stat"><b>'+plants.length+'</b><span>plants</span></div></div>';
+  h += '<section class="card"><div class="row between"><h2>Today</h2>'+(outdoorDue?'<button class="btn sm ghost" data-act="rained">It rained</button>':'')+'</div>';
+  if (!plants.length) h += '<p class="empty">No plants yet. Add one from My plants or Identify.</p>';
+  else if (!now.length) h += '<p class="empty">Nothing due. Your plants are looked after.</p>';
+  else h += '<div>'+now.map(x => taskRow(x,false)).join("")+'</div>';
+  h += '</section>';
+  if (soon.length) h += '<section class="card"><h2>Next 7 days</h2><div>'+soon.map(x => taskRow(x,true)).join("")+'</div></section>';
+  if (!meta.remindersOn) h += '<div class="notice row between"><span>Get an alert when plants need you.</span><button class="btn sm primary" data-act="settings">Set up reminders</button></div>';
+  return h;
+}
+function taskRow(x, upcoming){
+  const {p,t,due} = x;
+  return '<div class="task"><button class="thumb" data-act="open" data-id="'+p.id+'" aria-label="Open '+esc(p.name)+'">'+(p.cover?'<img src="'+p.cover+'" alt="" style="width:100%;height:100%;object-fit:cover">':initial(p))+'</button>'+
+    '<div class="stripe '+tCls(t)+'"><div class="what">'+esc(tLabel(t))+' · '+esc(p.name)+'</div><div class="small muted">'+dueText(due)+(t.type==="water"?" · every "+days(every(t,p))+" now":"")+'</div></div>'+
+    '<div class="acts">'+(upcoming?'':'<button class="btn sm ghost" data-act="later" data-id="'+p.id+'" data-t="'+t.id+'">Later</button>')+'<button class="btn sm primary" data-act="done" data-id="'+p.id+'" data-t="'+t.id+'">Done</button></div></div>';
+}
+
+function viewPlants(){
+  let h = '<div class="row between"><h2>My plants</h2><button class="btn primary" data-act="add">Add plant</button></div>';
+  if (!plants.length) return h + '<p class="empty">No plants yet. Add one by name, or identify one with Claude.</p>';
+  h += '<div class="grid">';
+  for (const p of plants){
+    const n = nextTask(p);
+    h += '<button class="pcard" data-act="open" data-id="'+p.id+'"><div class="ph">'+(p.cover?'<img src="'+p.cover+'" alt="">':initial(p))+'</div>'+
+      '<div class="bd"><span class="nm">'+esc(p.name)+'</span><span class="loc">'+esc(p.location || SETTINGS[p.setting] || "")+'</span>'+
+      (n ? '<span class="pill '+tCls(n.t)+(n.d < today()?" bad":"")+'">'+esc(tLabel(n.t))+' · '+(n.d<=today()?(n.d<today()?"late":"today"):fmt(n.d))+'</span>' : '')+
+      '</div></button>';
+  }
+  return h + '</div>';
+}
+
+function pasteBox(id, label){
+  return '<div class="paste"><label class="f">'+label+'<textarea id="'+id+'" placeholder="Paste Claude\'s reply here"></textarea></label>'+
+    '<div class="row"><button class="btn sm" data-act="clip" data-target="'+id+'">Paste from clipboard</button><button class="btn sm primary" data-act="read-'+id+'">Read reply</button></div></div>';
+}
+
+function viewIdentify(){
+  let h = '<h2>Identify a plant</h2>';
+  h += '<section class="card"><ol class="howto"><li>Tap <b>Open Claude</b>. Your question is written for you.</li><li>In Claude, attach a photo of the plant and send.</li><li>Copy Claude\'s reply, come back, and paste it below.</li></ol>'+
+    '<label class="f">Anything you know (optional)<input type="text" id="id-hint" placeholder="e.g. smells like basil, from a nursery" value="'+esc(idS.hint)+'"></label>'+
+    '<label class="f">Where will it grow?<select id="id-set">'+Object.entries(SETTINGS).map(([k,v])=>'<option value="'+k+'"'+(k===idS.setting?" selected":"")+'>'+v+'</option>').join("")+'</select></label>'+
+    '<a class="btn primary" target="_blank" rel="noopener" data-act="claude" data-kind="identify" href="'+esc(claudeLink(identifyPrompt()))+'">Open Claude</a></section>';
+  h += '<section class="card">'+pasteBox("id-paste","Claude's reply")+(idS.err?'<p class="small" style="color:var(--bad)">'+esc(idS.err)+'</p>':'')+'</section>';
+  const r = idS.parsed;
+  if (r){
+    h += '<section class="card"><div><h2>'+esc(r.name||"Unknown plant")+'</h2>'+(r.species?'<div class="sci">'+esc(r.species)+'</div>':'')+'</div>'+careList(r.care||{}, null)+
+      '<h3>Add to my plants</h3>'+
+      '<label class="f">Where is it?<input type="text" id="id-loc" placeholder="e.g. Deck, by the fence" value="'+esc(idS.loc)+'"></label>'+
+      '<span class="btn filebtn">'+(idS.photo?"Photo added":"Add a photo (optional)")+'<input type="file" accept="image/*" id="id-photo"></span>'+
+      '<button class="btn primary" data-act="id-add">Add '+esc(r.name||"plant")+'</button></section>';
+  }
+  return h;
+}
+
+function careList(c, p){
+  if (!c) return "";
+  const rows = [];
+  if (p) rows.push(["Water", "Every "+days(waterEvery(p))+" in "+season().toLowerCase()+" ("+(+c.waterSummerDays||"?")+" in summer, "+(+c.waterWinterDays||"?")+" in winter)"]);
+  else if (c.waterSummerDays) rows.push(["Water", "Every "+c.waterSummerDays+" days in summer, "+(c.waterWinterDays||"?")+" in winter"]);
+  if (c.light) rows.push(["Light", c.light]);
+  if (+c.feedEveryDays) rows.push(["Feed", "Every "+c.feedEveryDays+" days"+(c.feedTip?". "+c.feedTip:"")]);
+  else if (c.feedTip) rows.push(["Feed", c.feedTip]);
+  if (+c.mistEveryDays) rows.push(["Mist", "Every "+c.mistEveryDays+" days"]);
+  if (c.humidity) rows.push(["Humidity", c.humidity]);
+  if (c.temperature) rows.push(["Temperature", c.temperature]);
+  if (c.soil) rows.push(["Soil", c.soil]);
+  if (c.toxicity) rows.push(["Safety", c.toxicity]);
+  if (c.difficulty) rows.push(["Difficulty", c.difficulty]);
+  let h = '<dl class="care">'+rows.map(r => '<dt>'+esc(r[0])+'</dt><dd>'+esc(r[1])+'</dd>').join("")+'</dl>';
+  const tips = (c.tips||[]).filter(Boolean);
+  if (tips.length) h += '<ul class="tips">'+tips.map(t => '<li>'+esc(t)+'</li>').join("")+'</ul>';
+  return h;
+}
+
+function viewHealth(){
+  const p = plants.find(x => x.id === hcS.plantId);
+  let h = '<h2>Health check</h2>';
+  h += '<section class="card"><label class="f">Which plant?<select id="hc-plant"><option value="">A plant not in my list</option>'+plants.map(x => '<option value="'+x.id+'"'+(x.id===hcS.plantId?" selected":"")+'>'+esc(x.name)+'</option>').join("")+'</select></label>'+
+    '<label class="f">What have you noticed? (optional)<textarea id="hc-sym" placeholder="e.g. yellow leaves with black spots, started last week">'+esc(hcS.symptoms)+'</textarea></label>'+
+    '<ol class="howto"><li>Tap <b>Open Claude</b>. Your plant\'s details are included.</li><li>Attach a close-up photo of the problem and send.</li><li>Copy the reply and paste it below. It\'s saved to the plant\'s journal.</li></ol>'+
+    '<a class="btn primary" target="_blank" rel="noopener" data-act="claude" data-kind="health" href="'+esc(claudeLink(healthPrompt(p)))+'">Open Claude</a></section>';
+  h += '<section class="card">'+pasteBox("hc-paste","Claude's reply")+
+    '<span class="btn sm filebtn">'+(hcS.photo?"Photo added":"Keep the photo in the journal (optional)")+'<input type="file" accept="image/*" id="hc-photo"></span>'+
+    (hcS.err?'<p class="small" style="color:var(--bad)">'+esc(hcS.err)+'</p>':'')+'</section>';
+  if (hcS.res) h += diagnosisCard(hcS.res);
+  return h;
+}
+const OVERALL = {healthy:["Healthy",""], minor:["Minor problem","feed"], "needs-attention":["Needs attention","feed"], serious:["Serious","bad"]};
+function diagnosisCard(r){
+  const o = OVERALL[r.overall] || ["Result",""];
+  let h = '<section class="card"><div class="row between"><h2>Result</h2><span class="pill '+o[1]+'">'+o[0]+'</span></div>';
+  if (r.summary) h += '<p>'+esc(r.summary)+'</p>';
+  for (const i of (r.issues||[])){
+    h += '<div class="issue"><div class="row between"><b>'+esc(i.name)+'</b><span class="pill '+(i.likelihood==="likely"?"feed":"")+'">'+esc(i.likelihood||"possible")+'</span></div>'+
+      (i.treatment&&i.treatment.length?'<ol class="steps">'+i.treatment.map(s=>'<li>'+esc(s)+'</li>').join("")+'</ol>':'')+'</div>';
+  }
+  const cc = (r.careChanges||[]).filter(Boolean);
+  if (cc.length) h += '<h3>Change in care</h3><ul class="tips">'+cc.map(s=>'<li>'+esc(s)+'</li>').join("")+'</ul>';
+  if (hcS.savedFor) h += '<p class="small ok">Saved to '+esc((plants.find(p=>p.id===hcS.savedFor)||{}).name||"the plant")+'\'s journal'+(+r.followUpDays?', with a re-check in '+days(+r.followUpDays):'')+'.</p>';
+  else h += '<p class="small muted">Choose the plant above to save this to its journal.</p>';
+  return h + '</section>';
+}
+
+/* ---------- sheets ---------- */
+function sheetPlant(p){
+  const photos = photoCache[p.id];
+  const byId = {}; if (Array.isArray(photos)) photos.forEach(x => byId[x.id] = x);
+  const cs = careS[p.id] || {};
+  let h = '<div class="sh-head"><h2>'+esc(p.name)+'</h2><button class="btn sm ghost" data-act="close">Close</button></div><div class="sh-body">';
+  h += p.cover ? '<img class="cover" src="'+p.cover+'" alt="'+esc(p.name)+'">' : '<div class="cover empty">'+initial(p)+'</div>';
+  h += '<div class="row between"><div>'+(p.species?'<div class="sci">'+esc(p.species)+'</div>':'')+'<div class="small muted">'+esc(SETTINGS[p.setting]||"")+(p.location?" · "+esc(p.location):"")+' · since '+fmtY(p.added||today())+'</div></div>'+
+    '<span class="btn sm filebtn">Photo<input type="file" accept="image/*" data-cover="'+p.id+'" aria-label="Change cover photo"></span></div>';
+  if (p.notes) h += '<p class="small">'+esc(p.notes)+'</p>';
+  if (p.lastHealth){ const o = OVERALL[p.lastHealth.overall]||["Checked",""]; h += '<div class="notice"><span class="pill '+o[1]+'">'+o[0]+'</span> Last health check '+fmt(p.lastHealth.d)+': '+esc(p.lastHealth.summary||"")+'</div>'; }
+
+  h += '<section class="card"><h3>Care schedule</h3>';
+  const tasks = (p.tasks||[]).map(t => ({t, d: dueOf(t,p)})).sort((a,b)=>a.d.localeCompare(b.d));
+  if (!tasks.length) h += '<p class="small muted">No tasks.</p>';
+  for (const {t,d} of tasks){
+    const n = every(t,p);
+    h += '<div class="stack stripe '+tCls(t)+'" style="padding-top:4px;padding-bottom:4px"><div class="row between"><div><b>'+esc(tLabel(t))+'</b><div class="small muted">'+dueText(d)+(t.last?' · last '+fmt(t.last):'')+'</div></div>'+
+      '<button class="btn sm primary" data-act="done" data-id="'+p.id+'" data-t="'+t.id+'">Done</button></div>';
+    if (n > 0 || t.type === "water"){
+      h += '<div class="row small" style="flex-wrap:wrap">'+(t.type==="water"&&t.auto
+        ? '<span class="muted">Every '+days(n)+', set by season</span><button class="btn sm ghost" data-act="manual" data-id="'+p.id+'" data-t="'+t.id+'">Set my own</button>'
+        : '<span class="muted">Every</span><input type="number" min="1" max="400" style="width:80px" id="ev-'+t.id+'" data-every="'+p.id+'" data-t="'+t.id+'" value="'+n+'"><span class="muted">days</span>'+(t.type==="water"?'<button class="btn sm ghost" data-act="auto" data-id="'+p.id+'" data-t="'+t.id+'">Use season</button>':''))+'</div>';
+    } else h += '<div class="small muted">One-off, on '+fmtY(t.due||today())+'</div>';
+    h += '<div class="row small"><a class="btn sm ghost" target="_blank" rel="noopener" href="'+esc(gcalLink(t,p))+'">Add to calendar</a><button class="btn sm ghost" data-act="del-task" data-id="'+p.id+'" data-t="'+t.id+'">Remove</button></div>';
+    h += '</div>';
+  }
+  h += '<details id="nt-'+p.id+'"><summary class="small" style="cursor:pointer;font-weight:600">Add a task</summary><div class="stack" style="margin-top:10px">'+
+    '<label class="f">Task<select id="nt-type-'+p.id+'">'+Object.entries(TASK).map(([k,v])=>'<option value="'+k+'">'+(k==="custom"?"Other…":v.label)+'</option>').join("")+'</select></label>'+
+    '<label class="f">Name (for Other)<input type="text" id="nt-label-'+p.id+'" placeholder="e.g. Spray for black spot"></label>'+
+    '<div class="row"><label class="f" style="flex:1">Repeat every (days)<input type="number" min="1" id="nt-every-'+p.id+'" placeholder="Empty = one-off"></label>'+
+    '<label class="f" style="flex:1">First / only date<input type="date" id="nt-date-'+p.id+'" value="'+today()+'"></label></div>'+
+    '<button class="btn" data-act="add-task" data-id="'+p.id+'">Add task</button></div></details></section>';
+
+  h += '<section class="card"><h3>Care guide</h3>'+(p.care&&Object.keys(p.care).length?careList(p.care,p):'<p class="small muted">No care guide yet.</p>')+
+    '<details id="cg-'+p.id+'"><summary class="small" style="cursor:pointer;font-weight:600">Update the guide with Claude</summary><div class="stack" style="margin-top:10px">'+
+    '<a class="btn sm primary" target="_blank" rel="noopener" href="'+esc(claudeLink(carePrompt(p)))+'">Open Claude</a>'+
+    pasteBox("cg-paste-"+p.id, "Claude's reply")+(cs.err?'<p class="small" style="color:var(--bad)">'+esc(cs.err)+'</p>':'')+'</div></details></section>';
+
+  h += '<section class="card"><h3>Ask Claude about this plant</h3>'+
+    '<textarea id="ask-'+p.id+'" placeholder="e.g. When should I prune it? Why are the lower leaves yellow?"></textarea>'+
+    '<div class="row"><button class="btn primary" data-act="ask" data-id="'+p.id+'">Ask in Claude</button><button class="btn ghost" data-act="go-health" data-id="'+p.id+'">Photo health check</button></div></section>';
+
+  h += '<section class="card"><h3>Journal</h3>'+
+    '<textarea id="jn-'+p.id+'" placeholder="Note: new buds, repotted, moved to sun…"></textarea>'+
+    '<div class="row"><span class="btn sm filebtn">'+(addS.journal&&addS.journal.pid===p.id?"Photo added":"Add photo")+'<input type="file" accept="image/*" data-jphoto="'+p.id+'" aria-label="Journal photo"></span>'+
+    '<button class="btn sm primary" data-act="note" data-id="'+p.id+'">Save entry</button></div><div class="log">';
+  for (const l of (p.log||[])){
+    const ph = l.photo ? byId[l.photo] : null;
+    h += '<div class="ent"><span class="d">'+fmtY(l.d)+'</span><div>'+esc(l.t)+(ph?'<img src="'+ph.img+'" alt="">':'')+'</div></div>';
+  }
+  h += '</div></section><button class="btn danger" data-act="ask-delete" data-id="'+p.id+'">Delete plant</button></div>';
+  return h;
+}
+function sheetAdd(){
+  return '<div class="sh-head"><h2>Add a plant</h2><button class="btn sm ghost" data-act="close">Close</button></div><div class="sh-body">'+
+    '<p class="small muted">Common plants get a care guide straight away. For anything else, update the guide with Claude from the plant\'s page.</p>'+
+    '<label class="f">Plant name<input type="text" id="ad-name" placeholder="e.g. Curry leaf, Monstera, Lemon tree"></label>'+
+    '<label class="f">Where is it?<input type="text" id="ad-loc" placeholder="e.g. Deck, kitchen window"></label>'+
+    '<label class="f">Setting<select id="ad-set">'+Object.entries(SETTINGS).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join("")+'</select></label>'+
+    '<label class="f">Notes (optional)<input type="text" id="ad-notes" placeholder="e.g. grown from seed"></label>'+
+    '<span class="btn filebtn">'+(addS.photo?"Photo added":"Add a photo (optional)")+'<input type="file" accept="image/*" id="ad-photo"></span>'+
+    '<button class="btn primary" data-act="ad-save">Add plant</button>'+
+    '<button class="btn ghost" data-act="tab" data-tab="identify">Don\'t know the name? Identify with Claude</button></div>';
+}
+function sheetConfirm(p){
+  return '<div class="sh-head"><h2>Delete '+esc(p.name)+'?</h2><button class="btn sm ghost" data-act="close">Cancel</button></div><div class="sh-body">'+
+    '<p>This removes the plant, its schedule and its journal photos from this phone. It can\'t be undone.</p>'+
+    '<div class="row"><button class="btn" data-act="open" data-id="'+p.id+'">Keep it</button><button class="btn danger" data-act="delete" data-id="'+p.id+'">Delete</button></div></div>';
+}
+function sheetSettings(){
+  const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let h = '<div class="sh-head"><h2>Settings</h2><button class="btn sm ghost" data-act="close">Close</button></div><div class="sh-body">';
+  if (!standalone) h += '<section class="card"><h3>Install on your phone</h3><p class="small">'+(installEvt?'Add Plant Keeper to your home screen so it opens like an app.':'In Chrome, tap the ⋮ menu, then <b>Add to Home screen</b> or <b>Install app</b>. On iPhone, tap Share, then <b>Add to Home Screen</b>.')+'</p>'+(installEvt?'<button class="btn primary" data-act="install">Install app</button>':'')+'</section>';
+  h += '<section class="card"><h3>Reminders</h3>';
+  if (perm === "granted" && meta.remindersOn) h += '<p class="small ok">Notifications are on.</p><p class="small">'+(meta.bgSync?'Your phone checks about once a day and alerts you when tasks are due. Android decides the exact time.':'You\'ll get an alert when you open the app on a day with tasks. For alerts at a set time, add the tasks to your calendar below.')+'</p><button class="btn sm" data-act="test-note">Send a test alert</button>';
+  else if (perm === "denied") h += '<p class="small">Notifications are blocked. Allow them for Plant Keeper in your phone\'s Settings → Apps → Notifications.</p>';
+  else if (perm === "unsupported") h += '<p class="small">This browser can\'t show notifications. Install the app first, or use the calendar option below.</p>';
+  else h += '<p class="small">Get an alert on days when your plants need something.</p><button class="btn primary" data-act="enable-rem">Turn on reminders</button>';
+  h += '<h3>Calendar alerts</h3><p class="small">For alerts at 8 am that always arrive, add your tasks to your phone calendar. Do this again when you add plants or the season changes.</p>'+
+    '<button class="btn" data-act="ics">Download all tasks for your calendar (.ics)</button><p class="small muted">Samsung Calendar opens this file directly. For Google Calendar, use <b>Add to calendar</b> on each task in a plant\'s page.</p></section>';
+  h += '<section class="card"><h3>Backup</h3><p class="small">Your plants are saved only on this phone. Keep a backup file in case you change phones or clear the browser.</p>'+
+    '<div class="row" style="flex-wrap:wrap"><button class="btn" data-act="export">Save backup</button><span class="btn filebtn">Restore from backup<input type="file" accept=".json,application/json" id="import-file"></span></div>'+
+    (meta.lastBackup?'<p class="small muted">Last backup '+fmtY(meta.lastBackup)+'</p>':'')+'</section>';
+  h += '<section class="card"><h3>About</h3><p class="small">Identify, health checks and questions open Claude, and you paste the reply back here. Everything else works offline.</p><a class="btn sm ghost" target="_blank" rel="noopener" href="'+CLAUDE_VERSION+'">Open the Claude version</a></section>';
+  return h + '</div>';
+}
+
+/* ---------- main render ---------- */
+const app = document.getElementById("app");
+function render(){
+  const keep = {}; let focusId = null, selS = null, selE = null, sheetScroll = 0;
+  app.querySelectorAll("input[id]:not([type=file]),textarea[id],select[id]").forEach(el => keep[el.id] = el.value);
+  const ae = document.activeElement;
+  if (ae && ae.id && app.contains(ae)) { focusId = ae.id; try { selS = ae.selectionStart; selE = ae.selectionEnd; } catch(e){} }
+  const sh = app.querySelector(".sheet"); if (sh) sheetScroll = sh.scrollTop;
+  const openDetails = new Set([...app.querySelectorAll("details[id][open]")].map(d => d.id));
+
+  let body;
+  if (!ready) body = loadErr ? '<p class="notice" style="border-left-color:var(--bad)">'+esc(loadErr)+'</p>' : '<p class="empty"><span class="spin"></span> Loading…</p>';
+  else if (tab === "today") body = viewToday();
+  else if (tab === "plants") body = viewPlants();
+  else if (tab === "identify") body = viewIdentify();
+  else body = viewHealth();
+
+  let sheetHtml = "";
+  if (sheet){
+    const p = sheet.id ? plants.find(x => x.id === sheet.id) : null;
+    if (sheet.kind === "add") sheetHtml = sheetAdd();
+    else if (sheet.kind === "settings") sheetHtml = sheetSettings();
+    else if (p && sheet.kind === "plant") sheetHtml = sheetPlant(p);
+    else if (p && sheet.kind === "confirm") sheetHtml = sheetConfirm(p);
+    else sheet = null;
+  }
+  app.innerHTML =
+    '<header class="top"><div class="wrap"><h1>Plant Keeper</h1><div class="hdr-r"><div class="season">'+season()+' in Auckland<br>'+fmtY(today())+'</div><button class="iconbtn" data-act="settings" aria-label="Settings">'+ICON.gear+'</button></div></div></header>'+
+    '<main><div class="wrap">'+body+'</div></main>'+
+    '<nav class="tabs" aria-label="Sections"><div class="wrap">'+TABS.map(k => '<button class="'+(k===tab?"on":"")+'" data-act="tab" data-tab="'+k+'" aria-current="'+(k===tab?"page":"false")+'">'+ICON[k]+TABNAME[k]+'</button>').join("")+'</div></nav>'+
+    (sheetHtml ? '<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">'+sheetHtml+'</div></div>' : '')+
+    (toastMsg ? '<div class="toast" role="status">'+esc(toastMsg)+'</div>' : '');
+  document.body.style.overflow = sheetHtml ? "hidden" : "";
+  openDetails.forEach(id => { const d = document.getElementById(id); if (d) d.open = true; });
+  for (const id in keep){ const el = document.getElementById(id); if (el && el.type !== "file") el.value = keep[id]; }
+  const nsh = app.querySelector(".sheet"); if (nsh && sheetScroll) nsh.scrollTop = sheetScroll;
+  if (focusId){ const el = document.getElementById(focusId); if (el){ el.focus({preventScroll:true}); try { if (selS != null) el.setSelectionRange(selS, selE); } catch(e){} } }
+}
+
+/* ---------- events ---------- */
+const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+function goTab(t){ tab = t; sheet = null; history.replaceState(null, "", "#"+t); window.scrollTo(0,0); render(); }
+
+app.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, id = b.dataset.id, tid = b.dataset.t;
+  if (act === "scrim"){ if (ev.target === b){ sheet = null; render(); } return; }
+  if (act === "claude"){ idS.hint = val("id-hint") || idS.hint; hcS.symptoms = val("hc-sym") || hcS.symptoms;
+    b.href = claudeLink(b.dataset.kind === "identify" ? identifyPrompt() : healthPrompt(plants.find(x => x.id === hcS.plantId))); return; }
+  if (act === "tab") return goTab(b.dataset.tab);
+  if (act === "close"){ sheet = null; render(); return; }
+  if (act === "settings"){ sheet = {kind:"settings"}; render(); return; }
+  if (act === "open"){ sheet = {kind:"plant", id}; render(); loadPhotos(id); return; }
+  if (act === "add"){ sheet = {kind:"add"}; addS.photo = null; render(); return; }
+  if (act === "done") return doneTask(id, tid);
+  if (act === "later") return laterTask(id, tid);
+  if (act === "rained") return rained();
+  if (act === "ask-delete"){ sheet = {kind:"confirm", id}; render(); return; }
+  if (act === "delete") return deletePlant(id);
+  if (act === "del-task"){ const p = getPlant(id); p.tasks = p.tasks.filter(t => t.id !== tid); savePlant(p); return; }
+  if (act === "manual"){ const p = getPlant(id); const t = p.tasks.find(x=>x.id===tid); t.every = waterEvery(p); t.auto = false; savePlant(p); return; }
+  if (act === "auto"){ const p = getPlant(id); const t = p.tasks.find(x=>x.id===tid); t.auto = true; savePlant(p); return; }
+  if (act === "add-task") return addTask(id);
+  if (act === "note") return addNote(id);
+  if (act === "ask"){ const q = val("ask-"+id); const p = getPlant(id); if (!q){ toast("Type your question first."); return; } window.open(claudeLink(askPrompt(p,q)), "_blank", "noopener"); return; }
+  if (act === "go-health"){ hcS.plantId = id; hcS.res = null; hcS.savedFor = ""; return goTab("health"); }
+  if (act === "clip"){ const tx = await clipboardText(); const el = document.getElementById(b.dataset.target);
+    if (tx == null){ toast("Long-press the box and choose Paste."); if (el) el.focus(); return; }
+    if (el){ el.value = tx; } return; }
+  if (act === "read-id-paste") return readIdentify();
+  if (act === "read-hc-paste") return readHealth();
+  if (act.startsWith("read-cg-paste-")) return readCare(act.slice("read-cg-paste-".length));
+  if (act === "id-add") return addFromId();
+  if (act === "ad-save") return addByName();
+  if (act === "enable-rem") return enableReminders();
+  if (act === "test-note"){ const reg = await navigator.serviceWorker.ready; reg.showNotification("Plant Keeper", {body:"Reminders are working.", icon:"icon-192.png", tag:"test"}); return; }
+  if (act === "ics"){ download("plant-keeper-reminders.ics", buildIcs(), "text/calendar"); return; }
+  if (act === "export") return exportBackup();
+  if (act === "install"){ if (installEvt){ installEvt.prompt(); installEvt = null; render(); } return; }
+});
+app.addEventListener("input", ev => {
+  const t = ev.target;
+  if (t.id === "id-hint") idS.hint = t.value;
+  if (t.id === "id-loc") idS.loc = t.value;
+  if (t.id === "hc-sym") hcS.symptoms = t.value;
+});
+app.addEventListener("change", async ev => {
+  const t = ev.target;
+  if (t.id === "id-set"){ idS.setting = t.value; render(); }
+  if (t.id === "hc-plant"){ hcS.plantId = t.value; hcS.savedFor = ""; render(); }
+  if (t.dataset.every){
+    const n = Math.round(+t.value);
+    if (n >= 1){ const p = getPlant(t.dataset.every); const k = p.tasks.find(x=>x.id===t.dataset.t); k.every = n; savePlant(p); }
+  }
+  if (t.type === "file" && t.files && t.files[0]){
+    const f = t.files[0];
+    try {
+      if (t.id === "import-file") return importBackup(f);
+      const img = await readImg(f);
+      if (t.id === "ad-photo") addS.photo = scaledURL(img,480,.72);
+      else if (t.id === "id-photo") idS.photo = scaledURL(img,480,.72);
+      else if (t.id === "hc-photo"){ hcS.photo = scaledURL(img,720,.7); if (hcS.res && hcS.savedFor) await attachHealthPhoto(); }
+      else if (t.dataset.cover){ const p = getPlant(t.dataset.cover); p.cover = scaledURL(img,480,.72); await savePlant(p); }
+      else if (t.dataset.jphoto) addS.journal = {pid: t.dataset.jphoto, img: scaledURL(img,720,.7)};
+      render();
+    } catch(e){ toast(e.message || "That photo couldn't be used."); }
+  }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet){ sheet = null; render(); } });
+
+/* ---------- handlers ---------- */
+function readIdentify(){
+  idS.err = ""; idS.parsed = null;
+  try {
+    const v = parseClaude(val("id-paste"));
+    if (!v.name) throw new Error("Claude's reply didn't include a plant name. Ask it to add the code block.");
+    idS.parsed = v;
+  } catch(e){ idS.err = e.message; }
+  render();
+}
+async function addFromId(){
+  const r = idS.parsed; if (!r) return;
+  const p = makePlant({name:r.name, species:r.species, location:idS.loc, setting:idS.setting, care:r.care||{}, cover:idS.photo||"", logText:"Identified with Claude and added"});
+  await savePlant(p);
+  Object.assign(idS, {parsed:null, loc:"", hint:"", photo:null});
+  const el = document.getElementById("id-paste"); if (el) el.value = "";
+  tab = "plants"; history.replaceState(null,"","#plants"); sheet = {kind:"plant", id:p.id};
+  toast(p.name+" added");
+}
+async function addByName(){
+  const name = val("ad-name");
+  if (!name){ toast("Enter the plant's name."); return; }
+  const e = libFind(name);
+  const p = makePlant({name, species: e ? e[1] : "", location: val("ad-loc"), setting: val("ad-set") || "outdoor-pot", notes: val("ad-notes"),
+    care: e ? libCare(e) : {waterSummerDays:3, waterWinterDays:10}, cover: addS.photo || ""});
+  await savePlant(p);
+  addS.photo = null; sheet = {kind:"plant", id:p.id}; tab = "plants"; history.replaceState(null,"","#plants");
+  toast(p.name+" added"+(e?"":". Update its care guide with Claude for exact watering."));
+}
+async function readCare(pid){
+  const cs = careS[pid] = {err:""};
+  try {
+    const v = parseClaude(val("cg-paste-"+pid));
+    if (!v.care) throw new Error("No care guide found in that reply.");
+    const p = getPlant(pid);
+    p.care = v.care; if (v.species && !p.species) p.species = v.species;
+    if (+v.care.feedEveryDays > 0 && !p.tasks.some(t=>t.type==="feed")) p.tasks.push({id:uid("t"),type:"feed",every:+v.care.feedEveryDays,last:null,due:addDays(today(),7)});
+    if (+v.care.mistEveryDays > 0 && !p.tasks.some(t=>t.type==="mist")) p.tasks.push({id:uid("t"),type:"mist",every:+v.care.mistEveryDays,last:null,due:today()});
+    addLog(p, "Care guide updated with Claude");
+    await savePlant(p); toast("Care guide updated");
+    const el = document.getElementById("cg-paste-"+pid); if (el) el.value = "";
+  } catch(e){ cs.err = e.message; render(); }
+}
+async function readHealth(){
+  hcS.err = ""; hcS.res = null; hcS.savedFor = "";
+  try {
+    const v = parseClaude(val("hc-paste"));
+    if (!v.overall && !v.summary && !v.issues) throw new Error("No health result found in that reply.");
+    hcS.res = v;
+    if (hcS.plantId) await saveDiagnosis();
+  } catch(e){ hcS.err = e.message; }
+  render();
+}
+async function saveDiagnosis(){
+  const r = hcS.res, pid = hcS.plantId; const p = getPlant(pid); if (!r || !p) return;
+  let photoId = null;
+  if (hcS.photo){ photoId = uid("ph"); await store.putPhoto({id:photoId, plant:pid, d:today(), img:hcS.photo, kind:"check"}); }
+  const o = OVERALL[r.overall] || ["Checked"];
+  const names = (r.issues||[]).map(i=>i.name).filter(Boolean).join(", ");
+  addLog(p, "Health check: "+o[0]+(names?" ("+names+")":"")+". "+(r.summary||""), photoId?{photo:photoId}:null);
+  p.lastHealth = {d:today(), overall:r.overall, summary:r.summary||""};
+  const chk = (p.tasks||[]).find(t => t.type==="check" && every(t,p) > 0); if (chk){ chk.last = today(); delete chk.snooze; }
+  const f = Math.round(+r.followUpDays||0);
+  if (f > 0) p.tasks.push({id:uid("t"), type:"check", label:"Re-check health", every:0, last:null, due:addDays(today(), f)});
+  await savePlant(p);
+  hcS.savedFor = pid; hcS.photo = null; delete photoCache[pid];
+  const el = document.getElementById("hc-paste"); if (el) el.value = "";
+}
+async function attachHealthPhoto(){
+  const p = getPlant(hcS.savedFor); if (!p || !hcS.photo) return;
+  const entry = (p.log||[]).find(l => l.t.startsWith("Health check")); if (!entry || entry.photo) return;
+  const id = uid("ph"); await store.putPhoto({id, plant:p.id, d:today(), img:hcS.photo, kind:"check"});
+  entry.photo = id; hcS.photo = null; delete photoCache[p.id]; await savePlant(p); toast("Photo added to the journal");
+}
+function addTask(pid){
+  const p = getPlant(pid); if (!p) return;
+  const type = val("nt-type-"+pid) || "custom";
+  const label = val("nt-label-"+pid);
+  const ev = Math.round(+val("nt-every-"+pid) || 0);
+  if (type === "custom" && !label){ toast("Give the task a name."); return; }
+  const t = {id:uid("t"), type, every: ev > 0 ? ev : 0, last:null, due: val("nt-date-"+pid) || today()};
+  if (label) t.label = label;
+  p.tasks = p.tasks || []; p.tasks.push(t); savePlant(p); toast("Task added");
+}
+async function addNote(pid){
+  const text = val("jn-"+pid);
+  const ph = addS.journal && addS.journal.pid === pid ? addS.journal.img : null;
+  if (!text && !ph){ toast("Write a note or add a photo."); return; }
+  const p = getPlant(pid);
+  let photoId = null;
+  if (ph){ photoId = uid("ph"); await store.putPhoto({id:photoId, plant:pid, d:today(), img:ph, kind:"journal"}); }
+  addLog(p, text || "Photo", photoId ? {photo:photoId} : null);
+  addS.journal = null;
+  const el = document.getElementById("jn-"+pid); if (el) el.value = "";
+  await savePlant(p); loadPhotos(pid, true);
+}
+async function deletePlant(pid){
+  sheet = null;
+  const name = (plants.find(p=>p.id===pid)||{}).name || "Plant";
+  plants = plants.filter(p => p.id !== pid); await persist(); render();
+  try { const ph = await store.photosFor(pid); for (const x of ph) await store.delPhoto(x.id); } catch(e){}
+  toast(name+" deleted");
+}
+async function exportBackup(){
+  const photos = await store.allPhotos();
+  download("plant-keeper-backup-"+today()+".json", JSON.stringify({app:"plant-keeper", version:1, saved:today(), plants, photos}), "application/json");
+  meta.lastBackup = today(); await store.set("meta", Object.assign((await store.get("meta"))||{}, {lastBackup:today()})); render();
+}
+async function importBackup(file){
+  try {
+    const v = JSON.parse(await file.text());
+    if (v.app !== "plant-keeper" || !Array.isArray(v.plants)) throw new Error();
+    for (const ph of (v.photos||[])) await store.putPhoto(ph);
+    plants = v.plants; await persist();
+    for (const k in photoCache) delete photoCache[k];
+    sheet = null; toast("Restored "+plants.length+" plants");
+  } catch(e){ toast("That isn't a Plant Keeper backup file."); }
+}
+
+/* ---------- start ---------- */
+const SEED = [{"id": "rose", "name": "Rose", "species": "Rosa hybrid", "location": "Deck, black pot by the fence", "setting": "outdoor-pot", "added": "2026-11-14", "notes": "", "cover": "data:image/jpeg;base64,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", "care": {"waterSummerDays": 2, "waterWinterDays": 7, "light": "Full sun, at least 6 hours a day", "feedEveryDays": 90, "feedTip": "1 scoop Kings Slow Release Rose Food around the drip-line, worked into the soil and watered in", "mistEveryDays": 0, "humidity": "Good airflow matters more than humidity; water the soil, not the leaves", "temperature": "Hardy in Auckland; no winter protection needed", "soil": "Rich, free-draining potting mix; mulch the top", "toxicity": "Not toxic to pets or children; watch the thorns", "difficulty": "moderate", "tips": ["Auckland humidity brings black spot: pick off spotted leaves and bin them", "Deadhead spent blooms to keep flowers coming through summer", "Hard prune in July, cutting to an outward-facing bud"]}, "tasks": [{"id": "r-water", "type": "water", "auto": true, "last": null, "due": "2026-11-15"}, {"id": "r-feed", "type": "feed", "every": 90, "last": "2026-11-14"}, {"id": "r-check", "type": "check", "label": "Check for black spot", "every": 7, "last": null, "due": "2026-11-21"}, {"id": "r-prune", "type": "prune", "label": "Winter prune", "every": 365, "last": null, "due": "2027-07-15"}], "log": [{"d": "2026-11-14", "t": "Yellow leaves with dark spots seen (possible black spot)"}, {"d": "2026-11-14", "t": "Fed 1 scoop Kings Slow Release Rose Food (NPK 13-3-10) around the drip-line"}]}, {"id": "tulasi", "name": "Tulasi", "species": "Ocimum tenuiflorum (holy basil)", "location": "Seed tray on a sunny windowsill", "setting": "indoor", "added": "2026-11-14", "notes": "Grown from seed. Move outside once it has 2–3 sets of true leaves and nights are warmer.", "cover": "", "care": {"waterSummerDays": 1, "waterWinterDays": 2, "light": "Bright light; full sun once planted out", "feedEveryDays": 0, "feedTip": "No feed until seedlings have true leaves, then a weak liquid feed every 2–3 weeks", "mistEveryDays": 0, "humidity": "Keep a clear cover on until sprouts appear", "temperature": "Needs 20–25°C to germinate; dislikes nights below 10°C", "soil": "Seed-raising mix, kept damp but not soggy", "toxicity": "Safe for pets and children", "difficulty": "easy", "tips": ["Don't cover the seeds: they need light to sprout", "Water from below or mist so seeds don't wash away", "Pinch out flower spikes later to keep leaves coming"]}, "tasks": [{"id": "u-water", "type": "water", "auto": true, "last": "2026-11-14"}, {"id": "u-sprout", "type": "custom", "label": "Check for sprouts", "every": 2, "last": null, "due": "2026-11-16"}, {"id": "u-out", "type": "custom", "label": "Move outdoors", "every": 0, "last": null, "due": "2026-12-15"}], "log": [{"d": "2026-11-14", "t": "Seeds sown on top of damp seed-raising mix, pressed in, not covered"}]}];
+render();
+(async () => {
+  try {
+    let p = await store.get("plants");
+    meta = (await store.get("meta")) || {};
+    if (!p){ p = SEED; await store.set("plants", p); }
+    plants = p; ready = true;
+  } catch(e){ loadErr = "This browser won't let Plant Keeper save data. Turn off private browsing, or open it in Chrome."; }
+  render();
+  if ("serviceWorker" in navigator){
+    try {
+      await navigator.serviceWorker.register("sw.js");
+      if (meta.remindersOn && "Notification" in window && Notification.permission === "granted"){
+        const reg = await navigator.serviceWorker.ready; if (reg.active) reg.active.postMessage({type:"remind"});
+      }
+    } catch(e){}
+  }
+})();
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; render(); });
+window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (TABS.includes(h) && h !== tab){ tab = h; render(); } });
+})();
+</script>
+</body>
+</html>
